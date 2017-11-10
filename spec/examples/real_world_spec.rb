@@ -27,6 +27,19 @@ describe EasyTranslate do
       res = EasyTranslate.translate ['hello world', 'i love you', 'good morning'], :to => :spanish, :concurrency => 2, :batch_size => 1
       expect(res).to eq(['Hola Mundo', 'te amo', 'Buenos días'])
     end
+
+    it 'should return detected language if option is set' do
+      res = EasyTranslate.translate ['hello world', 'i love you'], :to => :spanish, :include_metadata => true
+      expect(res.map { |translation_with_metadata|
+        {
+          :translated_text => translation_with_metadata.translated_text,
+          :detected_language => translation_with_metadata.detected_language,
+        }
+      }).to eq([
+        {:translated_text => 'Hola Mundo', :detected_language => 'en'},
+        {:translated_text => 'te amo', :detected_language => 'en'},
+      ])
+    end
   end
 
   describe :detect do

@@ -2,6 +2,7 @@ require 'json'
 require 'cgi'
 require 'easy_translate/request'
 require 'easy_translate/threadable'
+require 'ostruct'
 
 module EasyTranslate
 
@@ -11,6 +12,7 @@ module EasyTranslate
     # Translate text
     # @param [String, Array] texts - A single string or set of strings to translate
     # @option options [Fixnum] :batch_size - Maximum keys per request (optional, default 100)
+    # @option options [Boolean] :include_metadata - Include metadata like detected language (optional, default false)
     # @option options [Fixnum] :concurrency - Maximum concurrent requests (optional, default 4)
     # @option options [String, Symbol] :source - The source language (optional)
     # @option options [String, Symbol] :target - The target language (required)
@@ -24,17 +26,25 @@ module EasyTranslate
 
     # Perform a single request to translate texts
     # @param [Array] texts - Texts to translate
+    # @option options [Boolean] :include_metadata - Include metadata like detected language (optional, default false)
     # @option options [String, Symbol] :source - The source language (optional)
     # @option options [String, Symbol] :target - The target language (required)
     # @option options [Boolean] :html - Whether or not the supplied string is HTML (optional)
     # @return [String, Array] Translated text or texts
     def request_translations(texts, options = {}, http_options = {})
+      include_metadata = options.delete(:include_metadata) || false
       request = TranslationRequest.new(texts, options, http_options)
       # Turn the response into an array of translations
       raw = request.perform_raw
-      JSON.parse(raw)['data']['translations'].map do |res|
-        raw_translation = res['translatedText']
-        CGI.unescapeHTML(raw_translation)
+      JSON.parse(raw)['data']['translations'].map do |translation_with_metadata|
+        if include_metadata
+          OpenStruct.new({
+            :translated_text => translation_with_metadata["translatedText"],
+            :detected_language => translation_with_metadata["detectedSourceLanguage"],
+          })
+        else
+          translation_with_metadata['translatedText']
+        end
       end
     end
 
